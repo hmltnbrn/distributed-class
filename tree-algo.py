@@ -1,17 +1,72 @@
-#
-# Tree reconfiguration algorithm
-#
+#!/usr/bin/python
 
-class Node:
+"""
+Tree reconfiguration algorithm
+"""
 
-    def __init__(self, id):
-        self.id = id
+import threading
+import pickle
+import socket
+import time
+
+import messages
+
+
+# Real network interface name to send/receive packets
+DEV = "wlp2s0"
+
+# Broadcast address
+BROADCAST_ADDRESS = "192.168.255.255"
+PORT = 55000
+
+# Get the address of the device. IOCTL code.
+SIOCGIFADDR = 0x8915
+
+
+# Main algorithm
+class Node(threading.Thread):
+
+    def __init__(self, _id):
+        # Inherit methods from thread class
+        super(Node, self).__init__()
+
+        self.id = _id
         self.neighbors = {} # key = id of node, value = port (note: neighbors does not mean direct neighbors -- I think this means all nodes?)
         self.coord_so_far = id
         self.port_to_coord = None
         self.status = "IDLE"
         self.read_reply = {}
         self.set_of_ports = set()
+
+        # Thread run status
+        self.running = False
+
+        # Create network socket
+        # UDP datagram, bind to local address
+        self.recv_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.recv_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        # Bind to local IPv4 address
+        self.recv_socket.bind((BROADCAST_ADDRESS, PORT))
+        self.send_socket = self.recv_socket
+        self.iface_name = DEV
+
+    # Main thread routine - receive packets from the socket interface
+    def run(self):
+        self.running = True
+        while self.running:
+            data, addr = self.recv_socket.recvfrom(4096)
+            print(pickle.loads(data))
+            print(addr)
+
+    # Broadcast reconfig message
+    def send_reconfig_message(self):
+        # Create reconfig message
+        reconfig_message = messages.Reconfig()
+        reconfig_message.frag_id = self.id      # ???
+        reconfig_message.node_list = ["foo"]         # ???
+
+        # Send message
+        self.send_socket.sendto(pickle.dumps(reconfig_message), BROADCAST_ADDRESS)
 
     def port_To(self, id):
         # just some way to get ids
@@ -69,7 +124,7 @@ class Node:
                 for port in self.Set_of_ports.remove(sender_of(Reconfig)):
                     if not self.read_reply[port]:
                         # broadcast Reconfig(node_list, self.Coord_so_far)
-    
+
     def accept_No_Content(self):
         for port in self.Set_of_ports.remove(self.Port_to_coord):
             if(self.read_reply[port] == "No contention"):
@@ -86,7 +141,7 @@ class Node:
                     self.assign_Edge(self.port_to_coord)
                 else:
                     # broadcast no contention through Port_to_coord
-    
+
     def stop(self, frag_id): #this is a message that will be received from port p
         if frag_id > self.coord_so_far:
             self.coord_so_far = frag_id
@@ -101,7 +156,7 @@ class Node:
             self.port_to_coord = p
         if frag_id < self.coord_so_far:
             # broadcast Stop(self.Coord_so_far) through p
-    
+
     def abort(self): #this is a message that will be received from port p
         if self.status != "BACKOFF" and self.status != "IDLE":
             self.status = "BACKOFF"
@@ -109,16 +164,47 @@ class Node:
                 for port in self.set_of_ports.remove(sender_of(abort)):
                     if not self.read_reply[port]:
                         # broadcast Abort through port
-    
-    def no_Contention(): #this is a message that will be received from port p
+
+    def no_Contention(self): #this is a message that will be received from port p
         self.read_reply[p] = "No contention"
-        self.Accept_No_Content() # I think it's supposed to do this with every one of these received
-    
-    def accepted(): #this is a message that will be received from port p
+        self.accept_No_Content() # I think it's supposed to do this with every one of these received
+
+    def accepted(self): #this is a message that will be received from port p
         self.read_reply[p] = "Accepted"
-        self.Accept_No_Content() # I think it's supposed to do this with every one of these received
-    
-    def failure_Detector():
+        self.accept_No_Content() # I think it's supposed to do this with every one of these received
+
+    def failure_Detector(self):
         # this is my creation
         # it will need to run forever and check with all direct neighbors to try and find a failure
         # when it finds one, it will initiate a Reconfig([id], id) and set self.Coord_so_far = id and self.Port_to_coord = None
+        pass
+
+    # Stop thread routine
+    def quit(self):
+        self.recv_socket.close()
+        self.running = False
+
+
+# Starting point
+def main():
+    # Create Node instance
+    node = Node(0)
+    node.daemon = True
+
+    try:
+        # Start receive thread
+        node.start()
+
+        while True:
+            time.sleep(1)
+
+    # Catch SIGINT signal
+    except KeyboardInterrupt:
+        # Stop the thread
+        node.quit()
+
+    return 0
+
+
+if __name__ == "__main__":
+    main()
