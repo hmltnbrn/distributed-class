@@ -19,9 +19,6 @@ DEV = "wlp2s0"
 BROADCAST_ADDRESS = "192.168.255.255"
 PORT = 55000
 
-# Get the address of the device. IOCTL code.
-SIOCGIFADDR = 0x8915
-
 
 # Main algorithm
 class Node(threading.Thread):
@@ -66,7 +63,7 @@ class Node(threading.Thread):
         reconfig_message.node_list = ["foo"]         # ???
 
         # Send message
-        self.send_socket.sendto(pickle.dumps(reconfig_message), BROADCAST_ADDRESS)
+        self.send_socket.sendto(pickle.dumps(reconfig_message), (BROADCAST_ADDRESS, PORT))
 
     def port_To(self, id):
         # just some way to get ids
