@@ -14,11 +14,13 @@ class Reconfig:
         self.originator_ip = ""
         self.sender_ip = ""
         self.sender_id = 0
+        self.dest_list = []
 
     def __str__(self):
-        out_tuple = (self.id, self.node_list, self.frag_id, self.originator_ip, self.sender_ip, self.sender_id)
+        out_tuple = (self.id, self.node_list, self.frag_id, self.originator_ip,
+                     self.sender_ip, self.sender_id, self.dest_list)
         out_string = "MESSAGE_TYPE: %s, NODE_LIST: %s, FRAG_ID: %s, ORIG_IP: %s, " \
-                     "SENDER_IP: %s, SENDER_ID: %s" % out_tuple
+                     "SENDER_IP: %s, SENDER_ID: %s, DEST_LIST: %s" % out_tuple
         return out_string
 
 
@@ -29,10 +31,12 @@ class Stop:
         self.originator_ip = ""
         self.sender_ip = ""
         self.sender_id = 0
+        self.dest_list = []
 
     def __str__(self):
-        out_tuple = (self.id, self.frag_id, self.originator_ip, self.sender_ip, self.sender_id)
-        out_string = "MESSAGE_TYPE: %s, FRAG_ID: %s, ORIG_IP: %s, SENDER_IP: %s, SENDER_ID: %s" % out_tuple
+        out_tuple = (self.id, self.frag_id, self.originator_ip, self.sender_ip, self.sender_id, self.dest_list)
+        out_string = "MESSAGE_TYPE: %s, FRAG_ID: %s, ORIG_IP: %s, SENDER_IP: %s, " \
+                     "SENDER_ID: %s, DEST_LIST: %s" % out_tuple
         return out_string
 
 
@@ -43,10 +47,12 @@ class Abort:
         self.originator_ip = ""
         self.sender_ip = ""
         self.sender_id = 0
+        self.dest_list = []
 
     def __str__(self):
-        out_tuple = (self.id, self.frag_id, self.originator_ip, self.sender_ip, self.sender_id)
-        out_string = "MESSAGE_TYPE: %s, FRAG_ID: %s, ORIG_IP: %s, SENDER_IP: %s, SENDER_ID: %s" % out_tuple
+        out_tuple = (self.id, self.frag_id, self.originator_ip, self.sender_ip, self.sender_id, self.dest_list)
+        out_string = "MESSAGE_TYPE: %s, FRAG_ID: %s, ORIG_IP: %s, SENDER_IP: %s, " \
+                     "SENDER_ID: %s, DEST_LIST: %s" % out_tuple
         return out_string
 
 
@@ -57,10 +63,12 @@ class NoContention:
         self.originator_ip = ""
         self.sender_ip = ""
         self.sender_id = 0
+        self.dest_list = []
 
     def __str__(self):
-        out_tuple = (self.id, self.frag_id, self.originator_ip, self.sender_ip, self.sender_id)
-        out_string = "MESSAGE_TYPE: %s, FRAG_ID: %s, ORIG_IP: %s, SENDER_IP: %s, SENDER_ID: %s" % out_tuple
+        out_tuple = (self.id, self.frag_id, self.originator_ip, self.sender_ip, self.sender_id, self.dest_list)
+        out_string = "MESSAGE_TYPE: %s, FRAG_ID: %s, ORIG_IP: %s, SENDER_IP: %s, " \
+                     "SENDER_ID: %s, DEST_LIST: %s" % out_tuple
         return out_string
 
 
@@ -71,8 +79,10 @@ class Accept:
         self.originator_ip = ""
         self.sender_ip = ""
         self.sender_id = 0
+        self.dest_list = []
 
     def __str__(self):
-        out_tuple = (self.id, self.frag_id, self.originator_ip, self.sender_ip, self.sender_id)
-        out_string = "MESSAGE_TYPE: %s, FRAG_ID: %s, ORIG_IP: %s, SENDER_IP: %s, SENDER_ID: %s" % out_tuple
+        out_tuple = (self.id, self.frag_id, self.originator_ip, self.sender_ip, self.sender_id, self.dest_list)
+        out_string = "MESSAGE_TYPE: %s, FRAG_ID: %s, ORIG_IP: %s, SENDER_IP: %s, " \
+                     "SENDER_ID: %s, DEST_LIST: %s" % out_tuple
         return out_string

@@ -1,3 +1,4 @@
+#!/usr/bin/python
 """
 Broadcast initial reconfig message
 """
@@ -12,7 +13,7 @@ def main():
         # Get node_id from command line argument
         node_id = sys.argv[1]
         # Create node
-        node = tree_algo.Node(node_id)
+        node = tree_algo.Node(int(node_id))
         # Send reconfig message
         node.send_reconfig_message()
     else:
