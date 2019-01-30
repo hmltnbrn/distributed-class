@@ -15,6 +15,7 @@ class Reconfig:
         self.sender_ip = ""
         self.sender_id = 0
         self.dest_list = []
+        self.start_ts = 0
 
     def __str__(self):
         out_tuple = (self.id, self.node_list, self.frag_id, self.originator_ip,

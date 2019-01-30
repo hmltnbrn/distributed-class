@@ -60,6 +60,18 @@ class Node(threading.Thread):
         # self.set_of_ports = set()
         # Maintain ID list of already re-broadcasted reconfig messages, to send no_contention messages
         self.processed_reconfig_ids = []
+        # Store number of received message to calculated message overhead
+        self.message_count = 0
+        # Store a previous number of edges.
+        # This is needed for comparing the current edge list with the previous one to understand when the
+        # algorithms is finished:
+        # to calculate the convergence time - a time difference between sending initial reconfig message and
+        # completing the edge list
+        self.previous_edges = None
+        # Store the initial reconfig message TS
+        self.reconfig_start_ts = None
+        # Mark the algorithm as complete
+        self.complete = False
 
         # Thread run status
         self.running = False
@@ -88,13 +100,23 @@ class Node(threading.Thread):
                 continue
 
             if (self.ip in message.dest_list) or (message.dest_list == []):
+                self.message_count += 1
 
-                print("RECEIVED MESSAGE: %s" % message)
-                print("FROM ADDRESS: %s" % addr[0])
+                # print("RECEIVED MESSAGE: %s" % message)
+                # print("FROM ADDRESS: %s" % addr[0])
+                #
+                # print("NEIGHBORS: %s" % self.neighbors)
+                # print("EDGES: %s" % self.edges)
 
-                print("NEIGHBORS: %s" % self.neighbors)
-                print("EDGES: %s" % self.edges)
-                print("-" * 50)
+                # Check the difference between the previous edges and the current list
+                if (self.previous_edges == self.edges) and (self.complete is False) and \
+                        (self.reconfig_start_ts is not None):
+                    # The algorithm is complete, print the convergence time
+                    print("Algorithm is complete. Convergence Time: %s" % (time.time() - self.reconfig_start_ts))
+                    print("Message overhead: %s" % self.message_count)
+                    self.complete = True
+
+                # print("-" * 50)
 
                 # Update the neighbors list
                 if addr[0] not in self.neighbors:
@@ -124,6 +146,7 @@ class Node(threading.Thread):
         reconfig_message.originator_ip = self.ip
         reconfig_message.sender_ip = self.ip
         reconfig_message.sender_id = self.id
+        reconfig_message.start_ts = time.time()
 
         # Send message
         self.send_socket.sendto(pickle.dumps(reconfig_message), (BROADCAST_ADDRESS, PORT))
@@ -150,9 +173,13 @@ class Node(threading.Thread):
     def assign_edge(self, port):
         if port not in self.edges:
             self.edges.append(port)
+        self.previous_edges = list(self.edges)
 
     # Process the incoming reconfig message
     def process_reconfig(self, reconfig_message): # this is an incoming message (or initiated by itself if it detects a nearby failed node)
+        if self.reconfig_start_ts is None:
+            self.reconfig_start_ts = reconfig_message.start_ts
+
         no_contention_message = messages.NoContention()
         no_contention_message.frag_id = reconfig_message.frag_id
         no_contention_message.originator_ip = reconfig_message.originator_ip
@@ -268,8 +295,8 @@ class Node(threading.Thread):
     def accept_no_content(self, frag_id, originator_ip):
         # for port in self.Set_of_ports.remove(self.Port_to_coord):
         ports_list = list(self.neighbors)
-        if self.port_to_coord in ports_list:
-            ports_list.remove(self.port_to_coord)
+        # if self.port_to_coord in ports_list:
+        #     ports_list.remove(self.port_to_coord)
 
         accept_message = messages.Accept()
         accept_message.originator_ip = originator_ip
@@ -285,16 +312,20 @@ class Node(threading.Thread):
         no_contention_message.sender_id = self.id
 
         for port in ports_list:
+
             if self.read_reply[port] == "No contention":
                 continue
 
             elif self.read_reply[port] == "Accepted":
+                # self.assign_edge(self.port_to_coord)
+
                 # broadcast accepted through Port_to_coord
                 accept_message.dest_list.append(port)
                 # if self.port_to_coord not in self.neighbors:
                 if self.port_to_coord not in ports_list:
                     # self.Assign_Edge(self.Port_to_coord)
-                    self.assign_edge(self.port_to_coord)
+                    # self.assign_edge(self.port_to_coord)
+                    self.assign_edge(port)
                     pass
 
                 break    # you only need one accepted
@@ -306,10 +337,15 @@ class Node(threading.Thread):
             for i in ports_list:
                 # if i in self.get_Port and self.port_to_coord not in self.get_Port:
                 # if i in self.neighbors and self.port_to_coord not in self.neighbors:
+
+                # self.assign_edge(self.port_to_coord)
+
                 if self.port_to_coord not in ports_list:
                     # broadcast accepted through Port_to_coord
                     # self.assign_Edge(self.port_to_coord)  ???
-                    self.assign_edge(self.port_to_coord)
+                    # self.assign_edge(self.port_to_coord)
+                    # self.assign_edge(port)
+                    # self.assign_edge(i)
                     accept_message.dest_list.append(i)
                     # self.send_socket.sendto(pickle.dumps(accept_message), (i, PORT))
 
@@ -325,8 +361,11 @@ class Node(threading.Thread):
         #     self.send_socket.sendto(pickle.dumps(accept_message), (BROADCAST_ADDRESS, PORT))
         if accept_message.dest_list:
             self.send_socket.sendto(pickle.dumps(accept_message), (BROADCAST_ADDRESS, PORT))
+        # if no_contention_message.dest_list:
+        #     self.send_socket.sendto(pickle.dumps(no_contention_message), (BROADCAST_ADDRESS, PORT))
 
     def process_stop(self, stop_message):   # this is a message that will be received from port p
+        stop_message.sender_ip = self.ip
         if stop_message.frag_id > self.coord_so_far:
             self.coord_so_far = stop_message.frag_id
             # broadcast Stop(frag_id) through self.Port_to_coord
@@ -363,6 +402,7 @@ class Node(threading.Thread):
             self.send_socket.sendto(pickle.dumps(stop_message), (BROADCAST_ADDRESS, PORT))
 
     def process_abort(self, abort_message):    # this is a message that will be received from port p
+        abort_message.sender_ip = self.ip
         if self.status != "BACKOFF" and self.status != "IDLE":
             self.status = "BACKOFF"
             if self.coord_so_far != abort_message.id:
